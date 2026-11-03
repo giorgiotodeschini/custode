@@ -1,0 +1,45 @@
+schema: spec-driven
+
+# Project context
+context: |
+  Methodology: Specification-Driven Development (SDD). Specs and changes drive all code;
+  no implementation without a corresponding spec requirement.
+  Coding standard: SOLID principles. "Zero vibe coding": every change must be deliberate,
+  traceable to a spec requirement, and reviewable.
+  External API calls, third-party library integrations, and framework-specific extensions
+  must always be verified against context7 or the official documentation. Never rely solely
+  on the agent's pre-trained memory for them.
+
+  Architecture decisions:
+  - Server: .NET 10 with Vertical Slices on top of shared infrastructure
+    (EF Core, ASP.NET Core Data Protection).
+  - Web UI: Angular (TypeScript).
+  - Desktop client: .NET 10, cross-platform.
+  - Authentication: local credentials via ASP.NET Core Identity issuing JWT;
+    future OIDC support per tenant.
+  - Multi-tenancy: shared database with a TenantId discriminator on tenant-owned data.
+  - Secret storage: encrypted at rest via ASP.NET Core Data Protection.
+
+  Implementation order: server first, then webui, then client. A change spanning
+  several components must respect this order unless the change explicitly says otherwise.
+
+  Languages: all artifacts, documentation, and code comments are written in English.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Always state what is out of scope
+    - "Identify which component(s) are affected: server, webui, client"
+  tasks:
+    - "Order tasks by component: server, then webui, then client"
+    - Each task must map to at least one spec requirement
+
+# Per-operation guidance
+operations:
+  apply:
+    guidance:
+      - Follow SOLID principles; keep each vertical slice self-contained
+      - Do not add behavior that is not covered by the change's specs
+  archive:
+    guidance:
+      - Summarize the archive outcome before finishing
