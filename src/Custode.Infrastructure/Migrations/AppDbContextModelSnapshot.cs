@@ -22,6 +22,91 @@ namespace Custode.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Custode.Infrastructure.Audit.AuditChainHead", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("LastSequence")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("AuditChainHeads", (string)null);
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Audit.AuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("PreviousHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SecondaryTargetId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SecondaryTargetType")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TargetId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("TargetType")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("AuditEntries", (string)null);
+                });
+
             modelBuilder.Entity("Custode.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -88,6 +173,160 @@ namespace Custode.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.Folder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("InheritsPermissions")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("TenantId", "ParentId");
+
+                    b.HasIndex("TenantId", "Path")
+                        .IsUnique();
+
+                    b.ToTable("Folders");
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.FolderGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FolderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Permissions")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PrincipalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PrincipalKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PrincipalId");
+
+                    b.HasIndex("FolderId", "PrincipalKind", "PrincipalId")
+                        .IsUnique();
+
+                    b.ToTable("FolderGrants");
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.Group", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.GroupMembership", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("GroupMemberships");
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.Secret", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("FolderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ProtectedPayload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FolderId");
+
+                    b.HasIndex("TenantId", "FolderId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Secrets");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -237,6 +476,41 @@ namespace Custode.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.Folder", b =>
+                {
+                    b.HasOne("Custode.Infrastructure.Vault.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.FolderGrant", b =>
+                {
+                    b.HasOne("Custode.Infrastructure.Vault.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.GroupMembership", b =>
+                {
+                    b.HasOne("Custode.Infrastructure.Vault.Group", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.Secret", b =>
+                {
+                    b.HasOne("Custode.Infrastructure.Vault.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

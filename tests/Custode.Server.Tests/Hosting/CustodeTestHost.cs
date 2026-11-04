@@ -1,8 +1,13 @@
+// Copyright (c) 2026 [Giorgio Todeschini]. All rights reserved.
+// Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
+
+using Custode.Infrastructure.Audit;
 using Custode.Infrastructure.Persistence;
 using Custode.Infrastructure.SecretProtection;
 using Custode.Infrastructure.Tenancy;
 using Custode.Server;
 using Custode.Server.Tests.Identity;
+using Custode.Server.Tests.Persistence;
 using Custode.Server.Tests.SecretProtection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -90,12 +95,24 @@ public sealed class CustodeTestHost : IAsyncDisposable
             else
             {
                 await context.Database.EnsureCreatedAsync();
+
+                foreach (var statement in AuditImmutabilityTriggers.SqliteUp)
+                {
+                    await context.Database.ExecuteSqlRawAsync(statement);
+                }
             }
         }
 
         await app.StartAsync();
 
         return new CustodeTestHost(app, databaseResource);
+    }
+
+    public AppDbContext CreateTenantContext(Guid tenantId)
+    {
+        return new AppDbContext(
+            Services.GetRequiredService<DbContextOptions<AppDbContext>>(),
+            new TestTenantContext { TenantId = tenantId });
     }
 
     public async ValueTask DisposeAsync()

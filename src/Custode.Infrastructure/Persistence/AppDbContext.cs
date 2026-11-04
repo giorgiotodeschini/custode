@@ -1,6 +1,11 @@
+// Copyright (c) 2026 [Giorgio Todeschini]. All rights reserved.
+// Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
+
 using System.Reflection;
+using Custode.Infrastructure.Audit;
 using Custode.Infrastructure.Identity;
 using Custode.Infrastructure.Tenancy;
+using Custode.Infrastructure.Vault;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -9,16 +14,40 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Custode.Infrastructure.Persistence;
 
-public class AppDbContext(DbContextOptions options, ITenantContext tenantContext)
-    : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options), IDataProtectionKeyContext
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IDataProtectionKeyContext
 {
     private const string TenantIdProperty = nameof(ITenantOwned.TenantId);
 
+    private readonly DbContextOptions _options;
+    private readonly ITenantContext _tenantContext;
+
+    public AppDbContext(DbContextOptions options, ITenantContext tenantContext) : base(options)
+    {
+        _options = options;
+        _tenantContext = tenantContext;
+    }
+
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
+    public DbSet<Folder> Folders => Set<Folder>();
+
+    public DbSet<Secret> Secrets => Set<Secret>();
+
+    public DbSet<Group> Groups => Set<Group>();
+
+    public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
+
+    public DbSet<FolderGrant> FolderGrants => Set<FolderGrant>();
+
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+
+    public DbSet<AuditChainHead> AuditChainHeads => Set<AuditChainHead>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ConfigureVault();
 
         var applyTenantFilter = typeof(AppDbContext).GetMethod(
             nameof(ApplyTenantFilter),
@@ -37,6 +66,8 @@ public class AppDbContext(DbContextOptions options, ITenantContext tenantContext
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        RejectTamperedAuditEntriesAsync(CancellationToken.None).GetAwaiter().GetResult();
+
         foreach (var entry in PendingTenantOwnedEntries())
         {
             var storedValues = entry.State == EntityState.Added ? null : entry.GetDatabaseValues();
@@ -48,6 +79,8 @@ public class AppDbContext(DbContextOptions options, ITenantContext tenantContext
 
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        await RejectTamperedAuditEntriesAsync(cancellationToken);
+
         foreach (var entry in PendingTenantOwnedEntries())
         {
             var storedValues = entry.State == EntityState.Added
@@ -61,7 +94,42 @@ public class AppDbContext(DbContextOptions options, ITenantContext tenantContext
 
     private void ApplyTenantFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : class, ITenantOwned
     {
-        modelBuilder.Entity<TEntity>().HasQueryFilter(entity => entity.TenantId == tenantContext.TenantId);
+        modelBuilder.Entity<TEntity>().HasQueryFilter(entity => entity.TenantId == _tenantContext.TenantId);
+    }
+
+    // The attempt is recorded in its own transaction before the save is blocked, so the record survives the rejection.
+    private async Task RejectTamperedAuditEntriesAsync(CancellationToken cancellationToken)
+    {
+        var attempts = ChangeTracker.Entries<AuditEntry>()
+            .Where(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            .ToList();
+
+        if (attempts.Count == 0)
+        {
+            return;
+        }
+
+        if (_tenantContext.TenantId is { } tenantId)
+        {
+            var scope = new FixedTenantContext(tenantId);
+            await using var auditContext = new AppDbContext(_options, scope);
+            var trail = new AuditTrail(auditContext, scope);
+
+            foreach (var attempt in attempts)
+            {
+                await trail.RecordDeniedAsync(
+                    new AuditRecord(
+                        Guid.Empty,
+                        AuditActions.AuditTamperingAttempt,
+                        "audit entry",
+                        attempt.Entity.Id.ToString("D"),
+                        "operation",
+                        attempt.State == EntityState.Deleted ? "delete" : "update"),
+                    cancellationToken);
+            }
+        }
+
+        throw new AuditEntryImmutableException();
     }
 
     private IEnumerable<EntityEntry> PendingTenantOwnedEntries()
@@ -73,7 +141,7 @@ public class AppDbContext(DbContextOptions options, ITenantContext tenantContext
     private void EnsureTenantOwnership(EntityEntry entry, PropertyValues? storedValues)
     {
         var tenantId = ((ITenantOwned)entry.Entity).TenantId;
-        var currentTenantId = tenantContext.TenantId;
+        var currentTenantId = _tenantContext.TenantId;
         var entityName = entry.Metadata.ClrType.Name;
 
         if (tenantId == Guid.Empty)
