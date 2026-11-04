@@ -1,8 +1,13 @@
+// Copyright (c) 2026 [Giorgio Todeschini]. All rights reserved.
+// Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
+
 using Custode.Infrastructure.Authentication;
 using Custode.Infrastructure.Identity;
 using Custode.Infrastructure.SecretProtection;
 using Custode.Infrastructure.Tenancy;
+using Custode.Infrastructure.Vault;
 using Custode.Server.Authentication;
+using Custode.Server.Errors;
 using Custode.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +23,7 @@ public static class CustodeServerExtensions
         services.AddCustodeTokenIssuance(configuration);
         services.AddCustodeAuthentication();
         services.AddCustodeSecretProtection(configuration);
+        services.AddCustodeVault(configuration);
 
         FeatureSlices.RegisterServices(services);
 
@@ -26,6 +32,7 @@ public static class CustodeServerExtensions
 
     public static WebApplication UseCustodeServer(this WebApplication app)
     {
+        app.UseMiddleware<VaultExceptionMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
 
