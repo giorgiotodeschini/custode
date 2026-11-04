@@ -39,3 +39,11 @@ Quando ricevi un prompt o un task per questo repository:
    * Prima di considerare un task completato, esegui i test sia su SQLite che su PostgreSQL tramite Testcontainers.
    * Assicurati che `openspec validate --strict` restituisca 0 errori o warning.
 4. **Nessuna Scorciatoia**: Non saltare i passaggi di validazione e non effettuare modifiche arbitrarie al DB senza regolare migrazione EF Core.
+5. **Intestazione di Copyright**: Ogni file sorgente principale (es. `.cs`, `.ts`) sotto `src/` e `tests/` creato o modificato DEVE iniziare con queste due righe, prima di qualsiasi altro contenuto (inclusi `using` e `import`):
+
+   ```
+   // Copyright (c) 2026 [Giorgio Todeschini]. All rights reserved.
+   // Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
+   ```
+
+   * Non applicare l'intestazione a file generati (migrazioni EF Core, `*.Designer.cs`, `obj/`, `bin/`, `node_modules/`), né a file di configurazione, JSON, Markdown o OpenSpec.
