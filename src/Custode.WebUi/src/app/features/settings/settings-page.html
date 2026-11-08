@@ -1,0 +1,19 @@
+<section class="flex max-w-xl flex-col gap-6">
+  <h1 class="text-lg font-semibold">Settings</h1>
+
+  <fieldset class="flex flex-col gap-3">
+    <legend class="text-sm font-semibold">Theme</legend>
+    @for (choice of choices; track choice.value) {
+      <label class="flex items-center gap-3 text-sm">
+        <input
+          type="radio"
+          name="theme"
+          [value]="choice.value"
+          [checked]="theme.preference() === choice.value"
+          (change)="choose(choice.value)"
+        />
+        {{ choice.label }}
+      </label>
+    }
+  </fieldset>
+</section>
