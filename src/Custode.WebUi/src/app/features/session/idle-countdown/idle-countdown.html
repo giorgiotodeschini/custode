@@ -1,0 +1,21 @@
+<div class="w-full max-w-md rounded-lg border border-border bg-surface-raised p-6 text-text shadow-lg">
+  <h2 id="idle-countdown-title" class="text-lg font-semibold">Are you still there?</h2>
+  <p class="mt-2 text-text-muted">
+    You have been inactive. Your session will end in
+    <span class="font-semibold text-text">{{ secondsLeft() }}</span>
+    seconds.
+  </p>
+  <div class="mt-6 flex flex-wrap justify-end gap-3">
+    <button
+      #stayButton
+      type="button"
+      class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast"
+      (click)="staySignedIn()"
+    >Stay signed in</button>
+    <button
+      type="button"
+      class="rounded-md border border-border px-4 py-2 font-medium text-text hover:bg-surface-muted"
+      (click)="signOut()"
+    >Sign out</button>
+  </div>
+</div>

@@ -1,0 +1,47 @@
+<main class="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-4 py-10">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-lg font-semibold">Sign in to Custode</h1>
+  </header>
+
+  @if (notice(); as message) {
+    <p role="status" class="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text">{{ message }}</p>
+  }
+
+  <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="flex flex-col gap-1">
+      <label for="sign-in-login" class="text-sm font-medium">Login</label>
+      <input
+        id="sign-in-login"
+        formControlName="login"
+        type="text"
+        autocomplete="username"
+        autocapitalize="none"
+        spellcheck="false"
+        required
+        class="rounded-md border border-border bg-surface-raised px-3 py-2 text-text"
+      />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="sign-in-password" class="text-sm font-medium">Password</label>
+      <input
+        id="sign-in-password"
+        formControlName="password"
+        type="password"
+        autocomplete="current-password"
+        required
+        class="rounded-md border border-border bg-surface-raised px-3 py-2 text-text"
+      />
+    </div>
+
+    @if (failure(); as message) {
+      <p role="alert" class="text-sm font-medium text-danger">{{ message }}</p>
+    }
+
+    <button
+      type="submit"
+      class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60"
+      [disabled]="submitting()"
+    >Sign in</button>
+  </form>
+</main>
