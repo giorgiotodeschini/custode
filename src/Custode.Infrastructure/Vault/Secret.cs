@@ -24,6 +24,10 @@ public sealed class Secret : ITenantOwned
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    public int CurrentVersion { get; set; } = 1;
+
+    public Guid ConcurrencyStamp { get; set; }
 }
 
 public enum SecretType
@@ -32,4 +36,6 @@ public enum SecretType
     Pat,
     ApiKey,
     File,
+    Structured,
+    KeyValue,
 }

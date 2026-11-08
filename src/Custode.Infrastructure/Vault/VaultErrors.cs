@@ -17,3 +17,9 @@ public sealed class VaultNotFoundException(string message) : VaultException(mess
 public sealed class VaultForbiddenException(string message) : VaultException(message, StatusCodes.Status403Forbidden);
 
 public sealed class VaultConflictException(string message) : VaultException(message, StatusCodes.Status409Conflict);
+
+public sealed class VaultPreconditionFailedException(string message) : VaultException(message, StatusCodes.Status412PreconditionFailed);
+
+public sealed class VaultPreconditionRequiredException(string message) : VaultException(message, StatusCodes.Status428PreconditionRequired);
+
+public sealed class VaultPayloadTooLargeException(string message) : VaultException(message, StatusCodes.Status413PayloadTooLarge);

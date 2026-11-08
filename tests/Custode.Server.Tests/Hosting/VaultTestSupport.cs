@@ -9,14 +9,35 @@ namespace Custode.Server.Tests.Hosting;
 
 public sealed class ApiClient(HttpClient httpClient, string token)
 {
-    public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, object? body = null)
+    public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, object? body = null, string? ifMatch = null)
     {
         var request = new HttpRequestMessage(method, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
+        if (ifMatch is not null)
+        {
+            request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
+        }
+
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
+        }
+
+        return await httpClient.SendAsync(request);
+    }
+
+    public async Task<HttpResponseMessage> SendRawJsonAsync(HttpMethod method, string url, string rawJson, string? ifMatch = null)
+    {
+        var request = new HttpRequestMessage(method, url)
+        {
+            Content = new StringContent(rawJson, System.Text.Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        if (ifMatch is not null)
+        {
+            request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
         }
 
         return await httpClient.SendAsync(request);

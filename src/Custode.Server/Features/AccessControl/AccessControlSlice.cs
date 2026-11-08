@@ -1,12 +1,15 @@
 // Copyright (c) 2026 [Giorgio Todeschini]. All rights reserved.
 // Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
 
+using Custode.Server.Authorization;
 using Custode.Infrastructure.Audit;
+using Custode.Infrastructure.Tenancy;
 using Custode.Server.Features.AccessControl.Common;
 using Custode.Server.Features.AccessControl.Grants;
 using Custode.Server.Features.AccessControl.Groups;
 using Custode.Server.Features.AccessControl.Inheritance;
 using Custode.Server.Features.AccessControl.Memberships;
+using Custode.Server.Features.AccessControl.Reads;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +30,11 @@ public sealed class AccessControlSlice : IFeatureSlice
         services.AddScoped<RevokeGrantHandler>();
         services.AddScoped<BreakInheritanceHandler>();
         services.AddScoped<RestoreInheritanceHandler>();
+        services.AddScoped<ListGroupsReadHandler>();
+        services.AddScoped<ListGroupMembersReadHandler>();
+        services.AddScoped<GrantsReadHandler>();
+        services.AddScoped<FolderInheritanceReadHandler>();
+        services.AddScoped<CallerPermissionsReadHandler>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -34,6 +42,27 @@ public sealed class AccessControlSlice : IFeatureSlice
         // Authentication comes from the fallback policy; tenant administration is enforced per endpoint by
         // TenantAdministratorFilter, which records denied attempts in the audit log.
         var access = endpoints.MapGroup("/api/access");
+
+        // Reads of tenant structure are limited to administrators; the caller's own permissions are open to any member.
+        access.MapGet("/groups", async (ListGroupsReadHandler handler, CancellationToken cancellationToken) =>
+                Results.Ok(await handler.HandleAsync(cancellationToken)))
+            .RequireAuthorization(TenantPolicies.TenantAdministrator);
+
+        access.MapGet("/groups/{id:guid}/members", async (Guid id, ListGroupMembersReadHandler handler, CancellationToken cancellationToken) =>
+                Results.Ok(await handler.HandleAsync(id, cancellationToken)))
+            .RequireAuthorization(TenantPolicies.TenantAdministrator);
+
+        access.MapGet("/grants", async (string? folderPath, GrantsReadHandler handler, CancellationToken cancellationToken) =>
+                Results.Ok(await handler.HandleAsync(folderPath, cancellationToken)))
+            .RequireAuthorization(TenantPolicies.TenantAdministrator);
+
+        access.MapGet("/folders", async (FolderInheritanceReadHandler handler, CancellationToken cancellationToken) =>
+                Results.Ok(await handler.HandleAsync(cancellationToken)))
+            .RequireAuthorization(TenantPolicies.TenantAdministrator);
+
+        access.MapGet("/me/permissions", async (string? folderPath, CallerPermissionsReadHandler handler, CancellationToken cancellationToken) =>
+                Results.Ok(await handler.HandleAsync(folderPath, cancellationToken)))
+            .RequireAuthorization();
 
         access.MapPost("/groups", async (GroupNameRequest request, CreateGroupHandler handler, CancellationToken cancellationToken) =>
                 Results.Ok(await handler.HandleAsync(request, cancellationToken)))

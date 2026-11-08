@@ -26,9 +26,11 @@ public sealed class SecurityAuditSlice : IFeatureSlice
             Guid? userId,
             string? action,
             string? outcome,
+            long? afterSequence,
+            int? limit,
             QueryAuditLogHandler handler,
             CancellationToken cancellationToken) =>
-            Results.Ok(await handler.HandleAsync(from, to, userId, action, outcome, cancellationToken)));
+            Results.Ok(await handler.HandleAsync(from, to, userId, action, outcome, afterSequence, limit, cancellationToken)));
 
         audit.MapGet("/verify", async (VerifyAuditLogHandler handler, CancellationToken cancellationToken) =>
             Results.Ok(await handler.HandleAsync(cancellationToken)));

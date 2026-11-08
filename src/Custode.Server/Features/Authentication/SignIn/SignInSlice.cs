@@ -1,6 +1,7 @@
 // Copyright (c) 2026 [Giorgio Todeschini]. All rights reserved.
 // Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
 
+using Custode.Server.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,13 +17,18 @@ public sealed class SignInSlice : IFeatureSlice
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/sign-in", async (SignInRequest request, SignInHandler handler, CancellationToken cancellationToken) =>
+        endpoints.MapPost("/api/auth/sign-in", async (HttpContext context, SignInRequest request, SignInHandler handler, CancellationToken cancellationToken) =>
         {
             var issued = await handler.HandleAsync(request, cancellationToken);
 
-            return issued is null
-                ? Results.Unauthorized()
-                : Results.Ok(new SignInResponse(issued.AccessToken, issued.ExpiresAt));
+            if (issued is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            RefreshCookie.Write(context, issued.RefreshToken, issued.RefreshExpiresAtUtc);
+
+            return Results.Ok(new SignInResponse(issued.AccessToken.AccessToken, issued.AccessToken.ExpiresAt));
         })
         .AllowAnonymous();
     }

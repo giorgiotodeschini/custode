@@ -2,8 +2,10 @@
 // Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Custode.Infrastructure.Administration;
 using Custode.Infrastructure.Audit;
 using Custode.Infrastructure.Identity;
+using Custode.Infrastructure.Sessions;
 using Custode.Infrastructure.Tenancy;
 using Custode.Infrastructure.Vault;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
@@ -43,11 +45,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 
     public DbSet<AuditChainHead> AuditChainHeads => Set<AuditChainHead>();
 
+    public DbSet<SecretVersion> SecretVersions => Set<SecretVersion>();
+
+    public DbSet<Session> Sessions => Set<Session>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<TenantPolicy> TenantPolicies => Set<TenantPolicy>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ConfigureVault();
+        modelBuilder.ConfigureSessionsAndPolicies();
 
         var applyTenantFilter = typeof(AppDbContext).GetMethod(
             nameof(ApplyTenantFilter),

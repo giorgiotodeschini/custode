@@ -12,6 +12,11 @@ public sealed record AuditEntryResponse(
     string? TargetType,
     string? TargetId,
     string? SecondaryTargetType,
-    string? SecondaryTargetId);
+    string? SecondaryTargetId,
+    string Hash,
+    string PreviousHash);
+
+// NextAfterSequence is the cursor for the following page, or null when this page is the last one.
+public sealed record AuditPageResponse(IReadOnlyList<AuditEntryResponse> Entries, long? NextAfterSequence);
 
 public sealed record AuditVerificationResponse(bool IsIntact, long EntriesVerified, long? FirstAlteredSequence);

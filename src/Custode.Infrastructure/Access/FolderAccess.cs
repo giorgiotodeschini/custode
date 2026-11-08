@@ -58,4 +58,53 @@ public sealed class FolderAccess(AppDbContext dbContext) : IFolderAccess
             current = parent;
         }
     }
+
+    public async Task<IReadOnlyDictionary<Guid, FolderPermissions>> GetEffectivePermissionsForAllFoldersAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var folders = await dbContext.Folders.AsNoTracking().ToListAsync(cancellationToken);
+        var foldersById = folders.ToDictionary(folder => folder.Id);
+
+        var groupIds = await dbContext.GroupMemberships
+            .AsNoTracking()
+            .Where(membership => membership.UserId == userId)
+            .Select(membership => membership.GroupId)
+            .ToListAsync(cancellationToken);
+
+        var grants = await dbContext.FolderGrants
+            .AsNoTracking()
+            .Where(grant => (grant.PrincipalKind == PrincipalKind.User && grant.PrincipalId == userId)
+                || (grant.PrincipalKind == PrincipalKind.Group && groupIds.Contains(grant.PrincipalId)))
+            .ToListAsync(cancellationToken);
+
+        var grantsByFolder = grants
+            .GroupBy(grant => grant.FolderId)
+            .ToDictionary(group => group.Key, group => group.Aggregate(FolderPermissions.None, (acc, grant) => acc | grant.Permissions));
+
+        var result = new Dictionary<Guid, FolderPermissions>();
+
+        foreach (var folder in folders)
+        {
+            var effective = FolderPermissions.None;
+            var current = folder;
+
+            while (true)
+            {
+                if (grantsByFolder.TryGetValue(current.Id, out var own))
+                {
+                    effective |= own;
+                }
+
+                if (!current.InheritsPermissions || current.ParentId is not { } parentId || !foldersById.TryGetValue(parentId, out var parent))
+                {
+                    break;
+                }
+
+                current = parent;
+            }
+
+            result[folder.Id] = effective;
+        }
+
+        return result;
+    }
 }

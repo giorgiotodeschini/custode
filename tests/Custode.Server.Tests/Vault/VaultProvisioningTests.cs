@@ -56,10 +56,10 @@ public sealed class VaultProvisioningTests : IAsyncLifetime
     {
         var tenant = Guid.NewGuid();
         var administrator = await CreateUserAsync("admin-audited", tenant, VaultWorld.AdministratorRole);
+        await _world.RegisterSessionAsync(administrator);
         await _world.Operator.SendAsync(HttpMethod.Post, $"/api/operator/tenants/{tenant}/vault", new { administratorUserId = administrator.Id });
 
-        var entries = await _world.As(administrator, tenant, VaultWorld.AdministratorRole)
-            .GetAsync<List<AuditEntryResponse>>("/api/audit");
+        var entries = await VaultHttpSteps.AuditAsync(_world.As(administrator, tenant, VaultWorld.AdministratorRole));
         var root = await VaultSeeder.FolderIdAsync(_world.Host, tenant, "/");
 
         var initialized = Assert.Single(entries, entry => entry.Action == AuditActions.VaultInitialized);

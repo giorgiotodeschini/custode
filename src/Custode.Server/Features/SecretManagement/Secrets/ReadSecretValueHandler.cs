@@ -45,6 +45,8 @@ internal sealed class ReadSecretValueHandler(
             return true;
         }, cancellationToken);
 
+        var pairs = value.Pairs?.Select(pair => new SecretPairResponse(pair.Key, pair.Value)).ToList();
+
         return new SecretValueResponse(
             secret.Id,
             secret.Name,
@@ -54,6 +56,9 @@ internal sealed class ReadSecretValueHandler(
             value.Username,
             value.Password,
             value.Value,
-            value.ContentBase64);
+            value.ContentBase64,
+            secret.Type == SecretType.Structured ? pairs : null,
+            secret.Type == SecretType.KeyValue ? pairs : null,
+            secret.CurrentVersion);
     }
 }

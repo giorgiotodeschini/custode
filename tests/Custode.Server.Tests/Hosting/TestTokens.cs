@@ -32,17 +32,13 @@ public static class TestTokens
         return new JsonWebTokenHandler().CreateToken(descriptor);
     }
 
-    public static string ForTenant(Guid tenantId, params string[] roles)
-    {
-        return ForUser(Guid.NewGuid(), tenantId, roles);
-    }
-
-    public static string ForUser(Guid userId, Guid tenantId, params string[] roles)
+    public static string ForUser(Guid userId, Guid tenantId, Guid sessionId, params string[] roles)
     {
         var claims = new List<Claim>
         {
             new("sub", userId.ToString()),
             new("tenant_id", tenantId.ToString()),
+            new("sid", sessionId.ToString()),
         };
         claims.AddRange(roles.Select(role => new Claim("role", role)));
 

@@ -32,6 +32,8 @@ public sealed class VaultWorld : IAsyncDisposable
         OperatorUser = operatorUser;
     }
 
+    private readonly Dictionary<Guid, Guid> _sessionIds = new();
+
     public CustodeTestHost Host { get; }
 
     public Guid TenantA { get; }
@@ -73,15 +75,32 @@ public sealed class VaultWorld : IAsyncDisposable
 
         var world = new VaultWorld(host, tenantA, tenantB, administratorA, memberA, outsiderA, userB, operatorUser);
 
+        foreach (var user in new[] { administratorA, memberA, outsiderA, userB, operatorUser })
+        {
+            world._sessionIds[user.Id] = await SessionTokens.StartSessionAsync(host.Services, user);
+        }
+
         await VaultHttpSteps.InitializeVaultAsync(world.Operator, tenantA, administratorA.Id);
         await VaultHttpSteps.InitializeVaultAsync(world.Operator, tenantB, userB.Id);
 
         return world;
     }
 
+    // Users created inside a test are signed in through this helper before they are used with As.
+    public async Task RegisterSessionAsync(ApplicationUser user)
+    {
+        _sessionIds[user.Id] = await SessionTokens.StartSessionAsync(Host.Services, user);
+    }
+
     public ApiClient As(ApplicationUser user, Guid tenantId, params string[] roles)
     {
-        return new ApiClient(Host.Client, TestTokens.ForUser(user.Id, tenantId, roles));
+        var sessionId = _sessionIds.GetValueOrDefault(user.Id);
+        if (sessionId == Guid.Empty)
+        {
+            throw new InvalidOperationException($"User '{user.UserName}' has no session. Create it through the world before using it.");
+        }
+
+        return new ApiClient(Host.Client, TestTokens.ForUser(user.Id, tenantId, sessionId, roles));
     }
 
     public async ValueTask DisposeAsync()

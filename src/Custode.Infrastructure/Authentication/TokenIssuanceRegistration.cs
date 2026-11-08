@@ -2,6 +2,7 @@
 // Licensed under the AGPL-3.0 License. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using Custode.Infrastructure.Administration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +21,7 @@ public static class TokenIssuanceRegistration
             .Validate(options => options.LifetimeMinutes > 0, "Jwt:LifetimeMinutes must be greater than zero.")
             .ValidateOnStart();
 
+        services.AddScoped<TenantPolicyReader>();
         services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
 
         return services;

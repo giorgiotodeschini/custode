@@ -10,4 +10,8 @@ public sealed class SecretStorageOptions
     public const long DefaultMaxFileSizeBytes = 1024 * 1024;
 
     public long MaxFileSizeBytes { get; set; } = DefaultMaxFileSizeBytes;
+
+    public const long DefaultMaxImportBodyBytes = 5L * 1024 * 1024;
+
+    public long MaxImportBodyBytes { get; set; } = DefaultMaxImportBodyBytes;
 }

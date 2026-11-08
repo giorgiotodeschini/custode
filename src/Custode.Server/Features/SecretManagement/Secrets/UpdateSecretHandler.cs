@@ -16,7 +16,7 @@ internal sealed class UpdateSecretHandler(
     SecretValueCodec codec,
     IAuditTrail auditTrail)
 {
-    public async Task<SecretMetadataResponse> HandleAsync(Guid secretId, SecretWriteRequest request, CancellationToken cancellationToken)
+    public async Task<SecretMetadataResponse> HandleAsync(Guid secretId, SecretWriteRequest request, string? ifMatch, CancellationToken cancellationToken)
     {
         var secret = await SecretLookup.FindAsync(dbContext, secretId, cancellationToken);
 
@@ -29,6 +29,8 @@ internal sealed class UpdateSecretHandler(
             "folder",
             secret.FolderId.ToString("D"),
             cancellationToken);
+
+        VersionTokens.ParseIfMatch(ifMatch);
 
         var name = SecretName.Normalize(request.Name);
         var type = SecretValueCodec.ParseType(request.Type);
@@ -43,33 +45,50 @@ internal sealed class UpdateSecretHandler(
             request.Password,
             request.Value,
             request.FileName,
-            request.ContentBase64));
-
-        if (await dbContext.Secrets.AnyAsync(
-                other => other.FolderId == secret.FolderId && other.Name == name && other.Id != secret.Id,
-                cancellationToken))
-        {
-            throw new VaultConflictException("A secret with this name already exists in the folder.");
-        }
+            request.ContentBase64,
+            request.Fields,
+            request.Pairs?.Select(pair => new SecretPairInput(pair.Key, pair.Value)).ToList()));
 
         var folderPath = await dbContext.Folders
             .Where(folder => folder.Id == secret.FolderId)
             .Select(folder => folder.Path)
             .SingleAsync(cancellationToken);
 
+        var now = DateTimeOffset.UtcNow;
+
+        // The secret is reloaded inside the unit of work, so a retry after a concurrency conflict sees the newer version
+        // and fails the version check instead of overwriting it.
         await AuditedWork.CommitAsync(dbContext, async () =>
         {
-            secret.Name = name;
-            secret.FileName = value.FileName;
-            secret.ProtectedPayload = value.ProtectedPayload;
-            secret.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            var current = await dbContext.Secrets.FirstOrDefaultAsync(entity => entity.Id == secretId, cancellationToken)
+                ?? throw new VaultNotFoundException("The requested folder or item does not exist.");
+
+            VersionTokens.Require(current.CurrentVersion, ifMatch);
+
+            if (await dbContext.Secrets.AnyAsync(
+                    other => other.FolderId == current.FolderId && other.Name == name && other.Id != current.Id,
+                    cancellationToken))
+            {
+                throw new VaultConflictException("A secret with this name already exists in the folder.");
+            }
+
+            current.Name = name;
+            current.FileName = value.FileName;
+            current.ProtectedPayload = value.ProtectedPayload;
+            current.UpdatedAtUtc = now;
+            current.CurrentVersion += 1;
+            current.ConcurrencyStamp = Guid.NewGuid();
+
+            dbContext.SecretVersions.Add(SecretVersioning.Snapshot(current, SecretVersionChangeKind.Updated, null, folderGuard.UserId, now));
 
             await auditTrail.RecordAsync(
-                new AuditRecord(folderGuard.UserId, AuditActions.SecretUpdated, "secret", secret.Id.ToString("D"), "folder", secret.FolderId.ToString("D")),
+                new AuditRecord(folderGuard.UserId, AuditActions.SecretUpdated, "secret", secretId.ToString("D"), "folder", current.FolderId.ToString("D")),
                 cancellationToken);
             return true;
         }, cancellationToken);
 
-        return SecretMetadataMapper.ToResponse(secret, folderPath);
+        var updated = await SecretLookup.FindAsync(dbContext, secretId, cancellationToken);
+
+        return SecretMetadataMapper.ToResponse(updated, folderPath);
     }
 }

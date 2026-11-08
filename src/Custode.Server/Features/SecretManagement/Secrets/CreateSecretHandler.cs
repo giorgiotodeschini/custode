@@ -36,7 +36,9 @@ internal sealed class CreateSecretHandler(
             request.Password,
             request.Value,
             request.FileName,
-            request.ContentBase64));
+            request.ContentBase64,
+            request.Fields,
+            request.Pairs?.Select(pair => new SecretPairInput(pair.Key, pair.Value)).ToList()));
 
         if (await dbContext.Secrets.AnyAsync(secret => secret.FolderId == folder.Id && secret.Name == name, cancellationToken))
         {
@@ -55,11 +57,14 @@ internal sealed class CreateSecretHandler(
             ProtectedPayload = value.ProtectedPayload,
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
+            CurrentVersion = 1,
+            ConcurrencyStamp = Guid.NewGuid(),
         };
 
         await AuditedWork.CommitAsync(dbContext, async () =>
         {
             dbContext.Secrets.Add(secret);
+            dbContext.SecretVersions.Add(SecretVersioning.Snapshot(secret, SecretVersionChangeKind.Created, null, folderGuard.UserId, now));
             await auditTrail.RecordAsync(
                 new AuditRecord(folderGuard.UserId, AuditActions.SecretCreated, "secret", secret.Id.ToString("D"), "folder", folder.Id.ToString("D")),
                 cancellationToken);

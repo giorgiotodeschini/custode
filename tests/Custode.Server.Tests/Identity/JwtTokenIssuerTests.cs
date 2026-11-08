@@ -36,11 +36,13 @@ public sealed class JwtTokenIssuerTests : IDisposable
         var user = await IdentityTestServices.CreateUserAsync(scope.ServiceProvider, "alice", tenantId, "Operator", "Auditor");
         var issuer = scope.ServiceProvider.GetRequiredService<ITokenIssuer>();
 
-        var issued = await issuer.IssueAsync(user);
+        var sessionId = Guid.NewGuid();
+        var issued = await issuer.IssueAsync(user, sessionId);
         var token = new JsonWebTokenHandler().ReadJsonWebToken(issued.AccessToken);
 
         Assert.Equal(user.Id.ToString(), token.GetClaim("sub")?.Value);
         Assert.Equal(tenantId.ToString(), token.GetClaim("tenant_id")?.Value);
+        Assert.Equal(sessionId.ToString(), token.GetClaim("sid")?.Value);
         Assert.Equal(["Auditor", "Operator"], token.Claims
             .Where(claim => claim.Type == "role")
             .Select(claim => claim.Value)
@@ -55,7 +57,7 @@ public sealed class JwtTokenIssuerTests : IDisposable
         var issuer = scope.ServiceProvider.GetRequiredService<ITokenIssuer>();
 
         var before = DateTimeOffset.UtcNow;
-        var issued = await issuer.IssueAsync(user);
+        var issued = await issuer.IssueAsync(user, Guid.NewGuid());
         var after = DateTimeOffset.UtcNow;
 
         var expectedMinimum = before.AddMinutes(15).AddSeconds(-5);
@@ -69,7 +71,7 @@ public sealed class JwtTokenIssuerTests : IDisposable
         using var scope = _services.CreateScope();
         var user = await IdentityTestServices.CreateUserAsync(scope.ServiceProvider, "carol", Guid.NewGuid());
         var issuer = scope.ServiceProvider.GetRequiredService<ITokenIssuer>();
-        var issued = await issuer.IssueAsync(user);
+        var issued = await issuer.IssueAsync(user, Guid.NewGuid());
 
         var parameters = new TokenValidationParameters
         {

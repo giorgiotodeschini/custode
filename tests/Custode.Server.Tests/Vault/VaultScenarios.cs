@@ -35,7 +35,7 @@ public static class VaultScenarios
         Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, grant.StatusCode);
 
-        var tenantBEntries = (await audit.Content.ReadFromJsonAsync<List<AuditEntryResponse>>())!;
+        var tenantBEntries = (await audit.Content.ReadFromJsonAsync<AuditPageResponse>())!.Entries;
         Assert.DoesNotContain(tenantBEntries, entry => entry.TargetId == created.Id.ToString("D"));
 
         var stillThere = await world.Administrator.GetAsync<SecretValueResponse>($"/api/secrets/{created.Id}/value");
@@ -53,7 +53,7 @@ public static class VaultScenarios
         Assert.Equal(HttpStatusCode.Forbidden, createGroup.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, grant.StatusCode);
 
-        var denied = await world.Administrator.GetAsync<List<AuditEntryResponse>>("/api/audit?outcome=denied");
+        var denied = await VaultHttpSteps.AuditAsync(world.Administrator, "?outcome=denied");
         Assert.Contains(denied, entry => entry.Action == AuditActions.GroupCreated && entry.ActorUserId == world.MemberA.Id);
         Assert.Contains(denied, entry => entry.Action == AuditActions.GrantSet && entry.ActorUserId == world.MemberA.Id);
     }
@@ -65,7 +65,7 @@ public static class VaultScenarios
         await world.Administrator.SendAsync(HttpMethod.Post, "/api/access/groups", new { name = "third" });
 
         var intact = await world.Administrator.GetAsync<AuditVerificationResponse>("/api/audit/verify");
-        var total = (await world.Administrator.GetAsync<List<AuditEntryResponse>>("/api/audit")).Count;
+        var total = (await VaultHttpSteps.AuditAsync(world.Administrator)).Count;
         Assert.True(intact.IsIntact);
         Assert.Equal(total, intact.EntriesVerified);
 

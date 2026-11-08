@@ -42,8 +42,23 @@ public static class VaultHttpSteps
         response.EnsureSuccessStatusCode();
     }
 
+    // Follows the cursor until the last page, so callers see the whole matching log.
     public static async Task<IReadOnlyList<AuditEntryResponse>> AuditAsync(ApiClient administrator, string query = "")
     {
-        return await administrator.GetAsync<List<AuditEntryResponse>>("/api/audit" + query);
+        var entries = new List<AuditEntryResponse>();
+        long? cursor = null;
+
+        do
+        {
+            var separator = query.Length == 0 ? "?" : "&";
+            var cursorPart = cursor is null ? string.Empty : $"&afterSequence={cursor}";
+            var page = await administrator.GetAsync<AuditPageResponse>($"/api/audit{query}{separator}limit=500{cursorPart}");
+
+            entries.AddRange(page.Entries);
+            cursor = page.NextAfterSequence;
+        }
+        while (cursor is not null);
+
+        return entries;
     }
 }

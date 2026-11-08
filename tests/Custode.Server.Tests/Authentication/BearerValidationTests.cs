@@ -34,7 +34,7 @@ public sealed class BearerValidationTests : IAsyncLifetime
     [Fact]
     public async Task ValidToken_ToProtectedEndpoint_Returns200()
     {
-        var token = TestTokens.ForTenant(Guid.NewGuid());
+        var token = await SessionTokens.IssueForNewUserAsync(_host.Services, Guid.NewGuid());
 
         var response = await SendWithTokenAsync(token);
 

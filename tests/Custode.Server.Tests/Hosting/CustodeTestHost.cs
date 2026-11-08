@@ -16,8 +16,15 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Custode.Server.Tests.Hosting;
+
+public sealed record TestHostSettings(
+    TimeProvider? Clock = null,
+    Action<DbContextOptionsBuilder>? ConfigureDatabase = null,
+    IReadOnlyDictionary<string, string?>? Configuration = null,
+    ILoggerProvider? LoggerProvider = null);
 
 public sealed class CustodeTestHost : IAsyncDisposable
 {
@@ -34,12 +41,12 @@ public sealed class CustodeTestHost : IAsyncDisposable
 
     public IServiceProvider Services => _app.Services;
 
-    public static Task<CustodeTestHost> StartAsync()
+    public static Task<CustodeTestHost> StartAsync(TimeProvider? clock = null)
     {
-        return StartAsync(sqliteFilePath: null, keyEncryptionCertificatePath: TestKeyEncryptionCertificate.Shared);
+        return StartAsync(new TestHostSettings(Clock: clock));
     }
 
-    public static async Task<CustodeTestHost> StartAsync(string? sqliteFilePath, string keyEncryptionCertificatePath)
+    public static async Task<CustodeTestHost> StartAsync(string? sqliteFilePath, string keyEncryptionCertificatePath, TimeProvider? clock = null)
     {
         var dataSource = sqliteFilePath is null ? "DataSource=:memory:" : $"DataSource={sqliteFilePath}";
         var connection = new SqliteConnection(dataSource);
@@ -49,6 +56,24 @@ public sealed class CustodeTestHost : IAsyncDisposable
             options => options.UseSqlite(connection),
             applyMigrations: false,
             keyEncryptionCertificatePath,
+            new TestHostSettings(Clock: clock),
+            connection);
+    }
+
+    public static async Task<CustodeTestHost> StartAsync(TestHostSettings settings)
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        return await StartWithDatabaseAsync(
+            options =>
+            {
+                options.UseSqlite(connection);
+                settings.ConfigureDatabase?.Invoke(options);
+            },
+            applyMigrations: false,
+            TestKeyEncryptionCertificate.Shared,
+            settings,
             connection);
     }
 
@@ -57,17 +82,35 @@ public sealed class CustodeTestHost : IAsyncDisposable
         return StartWithDatabaseAsync(
             options => options.UseNpgsql(connectionString),
             applyMigrations: true,
-            keyEncryptionCertificatePath);
+            keyEncryptionCertificatePath,
+            new TestHostSettings());
     }
 
     private static async Task<CustodeTestHost> StartWithDatabaseAsync(
         Action<DbContextOptionsBuilder> useDatabase,
         bool applyMigrations,
         string keyEncryptionCertificatePath,
+        TestHostSettings settings,
         IAsyncDisposable? databaseResource = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
         builder.WebHost.UseTestServer();
+
+        if (settings.Clock is not null)
+        {
+            builder.Services.AddSingleton(settings.Clock);
+        }
+
+        if (settings.LoggerProvider is not null)
+        {
+            builder.Logging.AddProvider(settings.LoggerProvider);
+        }
+
+        if (settings.Configuration is not null)
+        {
+            builder.Configuration.AddInMemoryCollection(settings.Configuration);
+        }
+
         builder.Configuration.AddInMemoryCollection(IdentityTestServices.JwtSettings());
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {

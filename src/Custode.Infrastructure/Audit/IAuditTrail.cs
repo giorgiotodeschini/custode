@@ -42,4 +42,17 @@ public static class AuditActions
     public const string InheritanceRestored = "inheritance restored";
     public const string VaultInitialized = "vault initialized";
     public const string AuditTamperingAttempt = "audit tampering attempt";
+    public const string SessionRevoked = "session revoked";
+    public const string RefreshTokenReuseDetected = "refresh token reuse detected";
+    public const string PasswordChanged = "password changed";
+    public const string MemberCreated = "member created";
+    public const string MemberDisabled = "member disabled";
+    public const string MemberEnabled = "member enabled";
+    public const string AdministratorRoleGranted = "administrator role granted";
+    public const string AdministratorRoleWithdrawn = "administrator role withdrawn";
+    public const string AdministratorRoleChanged = "administrator role changed";
+    public const string TenantPolicyChanged = "tenant policy changed";
+    public const string TenantBackupExported = "tenant backup exported";
+    public const string SecretRolledBack = "secret rolled back";
+    public const string SecretsImported = "secrets imported";
 }

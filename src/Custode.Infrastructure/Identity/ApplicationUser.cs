@@ -8,4 +8,8 @@ namespace Custode.Infrastructure.Identity;
 public class ApplicationUser : IdentityUser<Guid>
 {
     public Guid TenantId { get; set; }
+
+    public bool IsEnabled { get; set; } = true;
+
+    public bool MustChangePassword { get; set; }
 }

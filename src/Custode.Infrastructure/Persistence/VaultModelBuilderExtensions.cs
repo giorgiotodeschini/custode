@@ -32,8 +32,21 @@ public static class VaultModelBuilderExtensions
             secret.Property(entity => entity.Type).HasConversion<string>().HasMaxLength(32);
             secret.Property(entity => entity.FileName).HasMaxLength(255);
             secret.Property(entity => entity.ProtectedPayload).IsRequired();
+            secret.Property(entity => entity.ConcurrencyStamp).IsConcurrencyToken();
             secret.HasIndex(entity => new { entity.TenantId, entity.FolderId, entity.Name }).IsUnique();
             secret.HasOne<Folder>().WithMany().HasForeignKey(entity => entity.FolderId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SecretVersion>(version =>
+        {
+            version.HasKey(entity => entity.Id);
+            version.Property(entity => entity.Name).HasMaxLength(MaxNameLength).IsRequired();
+            version.Property(entity => entity.FileName).HasMaxLength(255);
+            version.Property(entity => entity.ProtectedPayload).IsRequired();
+            version.Property(entity => entity.ChangeKind).HasConversion<string>().HasMaxLength(16);
+            version.HasIndex(entity => new { entity.SecretId, entity.Number }).IsUnique();
+            version.HasIndex(entity => new { entity.TenantId, entity.SecretId });
+            version.HasOne<Secret>().WithMany().HasForeignKey(entity => entity.SecretId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Group>(group =>

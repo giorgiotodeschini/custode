@@ -16,6 +16,7 @@ internal static class SecretMetadataMapper
             folderPath,
             secret.FileName,
             secret.CreatedAtUtc,
-            secret.UpdatedAtUtc);
+            secret.UpdatedAtUtc,
+            secret.CurrentVersion);
     }
 }

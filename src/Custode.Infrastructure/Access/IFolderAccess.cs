@@ -6,4 +6,7 @@ namespace Custode.Infrastructure.Access;
 public interface IFolderAccess
 {
     Task<FolderPermissions> GetEffectivePermissionsAsync(Guid folderId, Guid userId, CancellationToken cancellationToken);
+
+    // Computes the user's effective permissions on every folder of the tenant with a fixed number of queries.
+    Task<IReadOnlyDictionary<Guid, FolderPermissions>> GetEffectivePermissionsForAllFoldersAsync(Guid userId, CancellationToken cancellationToken);
 }

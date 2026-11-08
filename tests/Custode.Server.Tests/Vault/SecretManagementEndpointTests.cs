@@ -277,7 +277,7 @@ public sealed class SecretManagementEndpointTests : IAsyncLifetime
             name = "stripe",
             type = "api-key",
             value = "new-value",
-        });
+        }, ifMatch: "\"1\"");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("new-value", (await _world.Administrator.GetAsync<SecretValueResponse>($"/api/secrets/{created.Id}/value")).Value);

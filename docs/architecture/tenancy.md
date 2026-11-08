@@ -34,6 +34,12 @@ Some operations act across tenants, for example provisioning a tenant. They must
 - Only this path disables the tenant filter (`IgnoreQueryFilters`). Regular feature code must not call it.
 - The policy itself (which claims or roles count as an operator) is defined by the server host.
 
+## Credential resolution (the only tenant-free read for unauthenticated requests)
+
+Sign-in looks a user up by login, and refresh resolves the hash of a refresh token. Both run before a tenant is bound to the request, so they read without a tenant scope. They read only the identity or session columns needed to authenticate, and they bind the tenant from the resolved user or session. A client cannot supply a tenant to them. No other unauthenticated operation reads tenant data.
+
+Identity users (`ApplicationUser`) are not tenant-owned entities, so the global query filter does not apply to them. Member queries filter by `TenantId` explicitly.
+
 ## Tests
 
 The behavior above is covered by tests in `tests/Custode.Server.Tests/Persistence/` and `tests/Custode.Server.Tests/Tenancy/`, using SQLite in-memory databases with two tenants.

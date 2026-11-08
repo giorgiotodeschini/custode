@@ -8,11 +8,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Custode.Server.Features.AccessControl.Common;
+namespace Custode.Server.Authorization;
 
 // Authorizes access-control changes inside the endpoint instead of with a policy, so that a denied
 // attempt can be recorded in the audit log before the 403 response is returned.
-internal sealed class TenantAdministratorFilter(string action, string targetType) : IEndpointFilter
+public sealed class TenantAdministratorFilter(string action, string targetType) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {

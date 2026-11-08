@@ -55,7 +55,7 @@ public sealed class TenantBindingTests : IAsyncLifetime
     public async Task TenantScope_IsTakenFromTokenClaim()
     {
         var tenantId = Guid.NewGuid();
-        var token = TestTokens.ForTenant(tenantId);
+        var token = await SessionTokens.IssueForNewUserAsync(_host.Services, tenantId);
 
         var tenant = await ReadTenantAsync(await SendGetAsync("/tests/tenant", token));
 
@@ -66,7 +66,7 @@ public sealed class TenantBindingTests : IAsyncLifetime
     public async Task TenantSuppliedInHeader_IsIgnored()
     {
         var tenantId = Guid.NewGuid();
-        var token = TestTokens.ForTenant(tenantId);
+        var token = await SessionTokens.IssueForNewUserAsync(_host.Services, tenantId);
         var request = new HttpRequestMessage(HttpMethod.Get, "/tests/tenant")
         {
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) },
@@ -82,7 +82,7 @@ public sealed class TenantBindingTests : IAsyncLifetime
     public async Task TenantSuppliedInQueryString_IsIgnored()
     {
         var tenantId = Guid.NewGuid();
-        var token = TestTokens.ForTenant(tenantId);
+        var token = await SessionTokens.IssueForNewUserAsync(_host.Services, tenantId);
 
         var tenant = await ReadTenantAsync(
             await SendGetAsync($"/tests/tenant?tenantId={Guid.NewGuid()}", token));
@@ -94,7 +94,7 @@ public sealed class TenantBindingTests : IAsyncLifetime
     public async Task TenantSuppliedInBody_IsIgnored()
     {
         var tenantId = Guid.NewGuid();
-        var token = TestTokens.ForTenant(tenantId);
+        var token = await SessionTokens.IssueForNewUserAsync(_host.Services, tenantId);
         var request = new HttpRequestMessage(HttpMethod.Post, "/tests/tenant")
         {
             Content = JsonContent.Create(new CustodeTestHost.TenantBody(Guid.NewGuid())),

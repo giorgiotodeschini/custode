@@ -4,6 +4,7 @@
 using Custode.Infrastructure.Authentication;
 using Custode.Infrastructure.Identity;
 using Custode.Infrastructure.SecretProtection;
+using Custode.Infrastructure.Sessions;
 using Custode.Infrastructure.Tenancy;
 using Custode.Infrastructure.Vault;
 using Custode.Server.Authentication;
@@ -20,10 +21,12 @@ public static class CustodeServerExtensions
     {
         services.AddCustodeTenancy();
         services.AddCustodeIdentity();
+        services.AddCustodeSessions(configuration);
         services.AddCustodeTokenIssuance(configuration);
         services.AddCustodeAuthentication();
         services.AddCustodeSecretProtection(configuration);
         services.AddCustodeVault(configuration);
+        services.AddOptions<Custode.Infrastructure.Backup.BackupOptions>().Bind(configuration.GetSection(Custode.Infrastructure.Backup.BackupOptions.SectionName));
 
         FeatureSlices.RegisterServices(services);
 
@@ -34,6 +37,7 @@ public static class CustodeServerExtensions
     {
         app.UseMiddleware<VaultExceptionMiddleware>();
         app.UseAuthentication();
+        app.UseMiddleware<PasswordChangeRequirementMiddleware>();
         app.UseAuthorization();
 
         FeatureSlices.MapEndpoints(app);

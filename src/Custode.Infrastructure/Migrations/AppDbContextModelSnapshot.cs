@@ -22,6 +22,32 @@ namespace Custode.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Custode.Infrastructure.Administration.TenantPolicy", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AccessTokenLifetimeMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ClipboardClearSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IdleTimeoutMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RefreshTokenLifetimeDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("TenantPolicies", (string)null);
+                });
+
             modelBuilder.Entity("Custode.Infrastructure.Audit.AuditChainHead", b =>
                 {
                     b.Property<Guid>("TenantId")
@@ -127,11 +153,17 @@ namespace Custode.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -173,6 +205,77 @@ namespace Custode.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Sessions.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("IssuedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ReplacedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "SessionId");
+
+                    b.ToTable("RefreshTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Sessions.Session", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("LastActivityAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("Sessions", (string)null);
                 });
 
             modelBuilder.Entity("Custode.Infrastructure.Vault.Folder", b =>
@@ -289,8 +392,15 @@ namespace Custode.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CurrentVersion")
+                        .HasColumnType("integer");
 
                     b.Property<string>("FileName")
                         .HasMaxLength(255)
@@ -327,6 +437,58 @@ namespace Custode.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Secrets");
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.SecretVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChangeKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProtectedPayload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SecretId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("SourceVersionNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SecretId", "Number")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "SecretId");
+
+                    b.ToTable("SecretVersions");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -478,6 +640,15 @@ namespace Custode.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Custode.Infrastructure.Sessions.RefreshToken", b =>
+                {
+                    b.HasOne("Custode.Infrastructure.Sessions.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Custode.Infrastructure.Vault.Folder", b =>
                 {
                     b.HasOne("Custode.Infrastructure.Vault.Folder", null)
@@ -510,6 +681,15 @@ namespace Custode.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("FolderId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Custode.Infrastructure.Vault.SecretVersion", b =>
+                {
+                    b.HasOne("Custode.Infrastructure.Vault.Secret", null)
+                        .WithMany()
+                        .HasForeignKey("SecretId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
