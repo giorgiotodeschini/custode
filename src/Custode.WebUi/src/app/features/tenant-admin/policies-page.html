@@ -1,0 +1,69 @@
+<section class="flex max-w-2xl flex-col gap-8">
+  <header class="flex flex-col gap-1">
+    <p class="text-sm text-text-muted">Tenant administration</p>
+    <h1 class="text-lg font-semibold">Security policies</h1>
+    <p class="text-sm text-text-muted">These values apply to every user of the tenant.</p>
+  </header>
+
+  @if (loadError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+
+  @if (saved()) {
+    <form class="flex flex-col gap-5" (submit)="$event.preventDefault(); save()" novalidate>
+      @for (field of fields; track field) {
+        <div class="flex flex-col gap-1">
+          <label [for]="'policy-' + field" class="text-sm font-medium">{{ ranges[field].label }}</label>
+          <div class="flex flex-wrap items-center gap-2">
+            <input
+              [id]="'policy-' + field"
+              type="number"
+              inputmode="numeric"
+              step="1"
+              [min]="ranges[field].min"
+              [max]="ranges[field].max"
+              [value]="draft()[field] ?? ''"
+              (input)="setField(field, $any($event.target).value)"
+              [attr.aria-describedby]="'policy-' + field + '-hint'"
+              class="w-32 rounded-md border border-border bg-surface px-3 py-2 text-text"
+            />
+            <span class="text-sm text-text-muted">{{ ranges[field].unit }}</span>
+          </div>
+          <p [id]="'policy-' + field + '-hint'" class="text-xs text-text-muted">Allowed: {{ rangeText(field) }}. Saved: {{ saved()![field] }} {{ ranges[field].unit }}.</p>
+          @if (attempted() && errors()[field]; as message) {
+            <p class="text-sm text-danger">{{ message }}</p>
+          }
+        </div>
+      }
+
+      @if (changed().length > 0) {
+        <section class="flex flex-col gap-2 rounded-md border border-border bg-surface-raised px-4 py-3 text-sm" aria-labelledby="effects-title">
+          <h2 id="effects-title" class="font-semibold">Effect of this change</h2>
+          <ul class="list-disc pl-5">
+            @for (effect of effects(); track effect) {
+              <li>{{ effect }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (serverErrors().length > 0) {
+        <div role="alert" class="flex flex-col gap-1 rounded-md border border-danger px-4 py-3 text-sm">
+          <p class="font-semibold">The server did not save the policy. The values above are not in effect.</p>
+          <ul class="list-disc pl-5">
+            @for (reason of serverErrors(); track reason) {
+              <li>{{ reason }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="flex items-center gap-3">
+        <button type="submit" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="saving()">Save policy</button>
+        @if (valid() && changed().length === 0) {
+          <span class="text-sm text-text-muted">No change to save.</span>
+        }
+      </div>
+    </form>
+  }
+</section>

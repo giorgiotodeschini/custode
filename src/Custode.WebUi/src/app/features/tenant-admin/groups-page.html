@@ -1,0 +1,72 @@
+<section class="flex max-w-5xl flex-col gap-8">
+  <header class="flex flex-col gap-1">
+    <p class="text-sm text-text-muted">Tenant administration</p>
+    <h1 class="text-lg font-semibold">Groups</h1>
+  </header>
+
+  @if (loadError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+  @if (actionError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+
+  <div class="overflow-x-auto rounded-md border border-border">
+    <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+      <caption class="sr-only">Groups of this tenant</caption>
+      <thead class="bg-surface-muted">
+        <tr>
+          <th scope="col" class="px-3 py-2 font-semibold">Name</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Members</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Folder grants</th>
+          <th scope="col" class="px-3 py-2 font-semibold"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (group of sortedGroups(); track group.id) {
+          <tr class="border-t border-border align-top">
+            <th scope="row" class="px-3 py-2 font-medium">
+              @if (renamingId() === group.id) {
+                <div class="flex flex-col gap-1">
+                  <label [for]="'rename-' + group.id" class="sr-only">New name for {{ group.name }}</label>
+                  <input [id]="'rename-' + group.id" type="text" autocomplete="off" [value]="renameValue()" (input)="renameValue.set($any($event.target).value)" class="rounded-md border border-border bg-surface px-2 py-1 text-text" />
+                  @if (renameError(); as message) {
+                    <p class="text-xs text-danger">{{ message }}</p>
+                  }
+                  <div class="flex gap-2">
+                    <button type="button" class="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-contrast" [disabled]="busy()" (click)="rename(group)">Save name</button>
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-muted" (click)="renamingId.set(null)">Cancel</button>
+                  </div>
+                </div>
+              } @else {
+                <a [routerLink]="['/administration/groups', group.id]" class="underline-offset-2 hover:underline">{{ group.name }}</a>
+              }
+            </th>
+            <td class="px-3 py-2">{{ group.memberCount }}</td>
+            <td class="px-3 py-2">{{ group.grantCount }}</td>
+            <td class="px-3 py-2 text-right whitespace-nowrap">
+              <button type="button" class="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-muted" [disabled]="busy()" (click)="startRename(group)">Rename<span class="sr-only"> {{ group.name }}</span></button>
+              <button type="button" class="ml-1 rounded-md border border-border px-2 py-1 text-xs text-danger hover:bg-surface-muted" [disabled]="busy()" (click)="remove(group)">Delete<span class="sr-only"> {{ group.name }}</span></button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="4" class="px-3 py-3 text-text-muted">No groups yet.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <form class="flex flex-col gap-4 rounded-md border border-border bg-surface-raised p-5" aria-labelledby="create-group-title" (submit)="$event.preventDefault(); create()" novalidate>
+    <h2 id="create-group-title" class="text-base font-semibold">Create a group</h2>
+    <div class="flex flex-col gap-1 sm:max-w-md">
+      <label for="group-name" class="text-sm font-medium">Group name</label>
+      <input id="group-name" type="text" autocomplete="off" [value]="newName()" (input)="newName.set($any($event.target).value)" class="rounded-md border border-border bg-surface px-3 py-2 text-text" />
+      @if (createError(); as message) {
+        <p role="alert" class="text-sm text-danger">{{ message }}</p>
+      }
+    </div>
+    <div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="busy()">Create group</button>
+    </div>
+  </form>
+</section>

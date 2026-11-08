@@ -1,0 +1,47 @@
+<section class="flex max-w-3xl flex-col gap-8">
+  <header class="flex flex-col gap-1">
+    <p class="text-sm"><a routerLink="/administration/groups" class="text-text-muted underline-offset-2 hover:underline">Groups</a></p>
+    <h1 class="text-lg font-semibold">{{ group()?.name ?? 'Group' }}</h1>
+    <p class="text-sm text-text-muted">Membership changes apply to the affected user on their next request.</p>
+  </header>
+
+  @if (loadError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+  @if (actionError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+
+  <section class="flex flex-col gap-3" aria-labelledby="members-title">
+    <h2 id="members-title" class="text-base font-semibold">Members ({{ members().length }})</h2>
+    <ul class="flex flex-col divide-y divide-border rounded-md border border-border">
+      @for (member of members(); track member.id) {
+        <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+          <span>{{ member.login }}</span>
+          <button type="button" class="rounded-md border border-border px-2 py-1 text-xs text-danger hover:bg-surface-muted" [disabled]="busy()" (click)="remove(member)">Remove<span class="sr-only"> {{ member.login }}</span></button>
+        </li>
+      } @empty {
+        <li class="px-3 py-2 text-sm text-text-muted">This group has no members.</li>
+      }
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-3 rounded-md border border-border bg-surface-raised p-5" aria-labelledby="add-member-title">
+    <h2 id="add-member-title" class="text-base font-semibold">Add a member</h2>
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-1">
+        <label for="add-member" class="text-sm font-medium">User of this tenant</label>
+        <select id="add-member" class="rounded-md border border-border bg-surface px-3 py-2 text-text" [disabled]="available().length === 0" (change)="selectedUser.set($any($event.target).value)">
+          <option value="">Choose…</option>
+          @for (member of available(); track member.id) {
+            <option [value]="member.id">{{ member.login }}</option>
+          }
+        </select>
+      </div>
+      <button type="button" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="busy() || !selectedUser()" (click)="add()">Add to group</button>
+    </div>
+    @if (available().length === 0) {
+      <p class="text-sm text-text-muted">Every enabled user of the tenant is already in this group.</p>
+    }
+  </section>
+</section>

@@ -1,0 +1,85 @@
+<section class="flex max-w-5xl flex-col gap-8">
+  <header class="flex flex-col gap-1">
+    <p class="text-sm text-text-muted">Tenant administration</p>
+    <h1 class="text-lg font-semibold">Members</h1>
+  </header>
+
+  @if (loadError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+  @if (actionError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+
+  <div class="overflow-x-auto rounded-md border border-border">
+    <table class="w-full min-w-[46rem] border-collapse text-left text-sm">
+      <caption class="sr-only">Members of this tenant</caption>
+      <thead class="bg-surface-muted">
+        <tr>
+          <th scope="col" class="px-3 py-2 font-semibold">Login</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Roles</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Groups</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Status</th>
+          <th scope="col" class="px-3 py-2 font-semibold"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (member of members(); track member.id) {
+          <tr class="border-t border-border align-top">
+            <th scope="row" class="px-3 py-2 font-medium">{{ member.login }}</th>
+            <td class="px-3 py-2 text-text-muted">{{ isAdmin(member) ? 'Tenant administrator' : 'Member' }}</td>
+            <td class="px-3 py-2">{{ member.groupCount }}</td>
+            <td class="px-3 py-2">
+              <span>{{ member.isEnabled ? 'Active' : 'Disabled' }}</span>
+              @if (member.mustChangePassword) {
+                <span class="block text-xs text-text-muted">Must change password at first sign-in</span>
+              }
+            </td>
+            <td class="px-3 py-2 text-right">
+              <div class="flex flex-col items-end gap-1">
+                <button type="button" class="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-muted disabled:opacity-60" [disabled]="busy()" (click)="toggleEnabled(member)">
+                  {{ member.isEnabled ? 'Disable' : 'Enable' }}<span class="sr-only"> {{ member.login }}</span>
+                </button>
+                @if (isAdmin(member)) {
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-muted disabled:opacity-60" [disabled]="busy() || cannotWithdraw(member)" (click)="toggleAdministrator(member)">
+                    Withdraw administrator role<span class="sr-only"> from {{ member.login }}</span>
+                  </button>
+                  @if (cannotWithdraw(member)) {
+                    <span class="text-xs text-text-muted">At least one administrator is required.</span>
+                  }
+                } @else {
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-muted disabled:opacity-60" [disabled]="busy()" (click)="toggleAdministrator(member)">
+                    Grant administrator role<span class="sr-only"> to {{ member.login }}</span>
+                  </button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="px-3 py-3 text-text-muted">No members.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <form class="flex flex-col gap-4 rounded-md border border-border bg-surface-raised p-5" aria-labelledby="create-member-title" (submit)="$event.preventDefault(); create()" novalidate>
+    <h2 id="create-member-title" class="text-base font-semibold">Create a member</h2>
+    <p class="text-sm text-text-muted">The member signs in with the initial password and must choose a new one at first sign-in.</p>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class="flex flex-col gap-1">
+        <label for="member-login" class="text-sm font-medium">Login</label>
+        <input id="member-login" type="text" autocomplete="off" spellcheck="false" [value]="login()" (input)="login.set($any($event.target).value)" class="rounded-md border border-border bg-surface px-3 py-2 text-text" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="member-password" class="text-sm font-medium">Initial password</label>
+        <input id="member-password" type="password" autocomplete="off" [value]="password()" (input)="password.set($any($event.target).value)" class="rounded-md border border-border bg-surface px-3 py-2 text-text" />
+      </div>
+    </div>
+    @if (createError(); as message) {
+      <p role="alert" class="text-sm text-danger">{{ message }}</p>
+    }
+    <div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="creating()">Create member</button>
+    </div>
+  </form>
+</section>
