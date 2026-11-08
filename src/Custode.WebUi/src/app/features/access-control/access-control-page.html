@@ -1,0 +1,108 @@
+<section class="flex flex-col gap-6 lg:flex-row">
+  <aside class="w-full shrink-0 lg:w-72" aria-label="Folder tree">
+    <app-folder-tree [selectedPath]="folderPath()" [inheritance]="inheritanceMap()" (folderSelected)="openFolder($event)" />
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col gap-6">
+    <header class="flex flex-col gap-3">
+      <p class="text-sm text-text-muted">Folder permissions</p>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="font-mono text-lg font-semibold">{{ folderPath() }}</h1>
+          @if (folderInfo(); as info) {
+            <span class="rounded-md border border-border px-2 py-0.5 text-sm" [class.text-danger]="!info.inheritsPermissions">
+              {{ info.inheritsPermissions ? 'Inheriting from parent' : 'Inheritance broken' }}
+            </span>
+          }
+        </div>
+        @if (inheritsFromParent()) {
+          <button type="button" class="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-surface-muted disabled:opacity-60" [disabled]="busy() || !hasParent()" (click)="breakInheritance()">Break inheritance</button>
+        } @else {
+          <button type="button" class="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-surface-muted disabled:opacity-60" [disabled]="busy() || !hasParent()" (click)="restoreInheritance()">Restore inheritance</button>
+        }
+      </div>
+    </header>
+
+    @if (loadError(); as message) {
+      <p role="alert" class="text-sm text-danger">{{ message }}</p>
+    }
+    @if (actionError(); as message) {
+      <p role="alert" class="text-sm text-danger">{{ message }}</p>
+    }
+
+    <section class="flex flex-col gap-3" aria-labelledby="acl-title">
+      <h2 id="acl-title" class="text-base font-semibold">Access on this folder</h2>
+      <div class="overflow-x-auto rounded-md border border-border">
+        <table class="w-full min-w-[48rem] border-collapse text-left text-sm">
+          <caption class="sr-only">Grants on {{ folderPath() }}, with the source of each level</caption>
+          <thead class="bg-surface-muted">
+            <tr>
+              <th scope="col" class="px-3 py-2 font-semibold">Principal</th>
+              @for (level of levels; track level) {
+                <th scope="col" class="px-3 py-2 font-semibold">{{ labels[level] }}</th>
+              }
+              <th scope="col" class="px-3 py-2 font-semibold"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (grant of grants(); track principalKey(grant)) {
+              <tr class="border-t border-border align-top">
+                <th scope="row" class="px-3 py-2 font-medium">
+                  {{ grant.principalName }}
+                  <span class="block text-xs font-normal text-text-muted">{{ grant.principalKind === 'group' ? 'Group' : 'User' }}</span>
+                </th>
+                @for (level of levels; track level) {
+                  <td class="px-3 py-2 text-xs" [attr.title]="levelCell(grant, level).title">{{ levelCell(grant, level).text }}</td>
+                }
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-muted" (click)="editGrant(grant)">Edit<span class="sr-only"> {{ grant.principalName }}</span></button>
+                  @if (hasDirect(grant)) {
+                    <button type="button" class="ml-1 rounded-md border border-border px-2 py-1 text-xs text-danger hover:bg-surface-muted" [disabled]="busy()" (click)="revoke(grant)">Revoke<span class="sr-only"> {{ grant.principalName }}</span></button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="px-3 py-3 text-text-muted">No principal has access to this folder.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 rounded-md border border-border bg-surface-raised p-5" aria-labelledby="grant-title">
+      <h2 id="grant-title" class="text-base font-semibold">Set access</h2>
+
+      <div class="flex flex-col gap-1">
+        <label for="grant-principal" class="text-sm font-medium">User or group of this tenant</label>
+        <select id="grant-principal" class="rounded-md border border-border bg-surface px-3 py-2 text-text sm:max-w-md" (change)="choosePrincipal($any($event.target).value)">
+          <option value="" [selected]="selectedKey() === ''">Choose…</option>
+          @for (option of principals(); track option.kind + option.id) {
+            <option [value]="option.kind + ':' + option.id" [selected]="selectedKey() === option.kind + ':' + option.id">
+              {{ option.kind === 'group' ? 'Group' : 'User' }}: {{ option.name }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <fieldset class="flex flex-col gap-2 text-sm">
+        <legend class="mb-1 font-medium">Access level</legend>
+        @for (choice of presets; track choice.id) {
+          <label class="flex items-center gap-2"><input type="radio" name="grant-preset" [checked]="preset() === choice.id" (change)="choosePreset(choice.id)" /> {{ choice.label }}</label>
+        }
+        <label class="flex items-center gap-2"><input type="radio" name="grant-preset" [checked]="preset() === 'custom'" (change)="choosePreset('custom')" /> Custom</label>
+        @if (preset() === 'custom') {
+          <div class="ml-6 flex flex-wrap gap-4">
+            @for (level of levels; track level) {
+              <label class="flex items-center gap-2"><input type="checkbox" [checked]="customLevels().has(level)" (change)="toggleCustomLevel(level, $any($event.target).checked)" /> {{ labels[level] }}</label>
+            }
+          </div>
+        }
+      </fieldset>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="button" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="busy() || !selectedPrincipal()" (click)="saveGrant()">Save access</button>
+        <p class="text-sm text-text-muted">Saved access on {{ folderPath() }} takes effect after the server confirms it.</p>
+      </div>
+    </section>
+  </div>
+</section>
