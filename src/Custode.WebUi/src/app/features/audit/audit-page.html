@@ -1,0 +1,145 @@
+<section class="flex max-w-6xl flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-lg font-semibold">Audit log</h1>
+    <p class="text-sm text-text-muted">The tenant's recorded actions, in sequence order. Filters are kept in the address, so a filtered view can be shared.</p>
+  </header>
+
+  <form class="grid gap-3 rounded-md border border-border bg-surface-raised p-4 text-sm sm:grid-cols-2 xl:grid-cols-6" aria-label="Filters" (submit)="$event.preventDefault()">
+    <div class="flex flex-col gap-1">
+      <label for="audit-timeframe" class="font-medium">Timeframe</label>
+      <select id="audit-timeframe" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" (change)="applyFilters({ preset: $any($event.target).value })">
+        <option value="last-24-hours" [selected]="filters().preset === 'last-24-hours'">Last 24 hours</option>
+        <option value="last-7-days" [selected]="filters().preset === 'last-7-days'">Last 7 days</option>
+        <option value="last-30-days" [selected]="filters().preset === 'last-30-days'">Last 30 days</option>
+        <option value="custom" [selected]="filters().preset === 'custom'">Custom range</option>
+      </select>
+    </div>
+
+    @if (filters().preset === 'custom') {
+      <div class="flex flex-col gap-1">
+        <label for="audit-from" class="font-medium">From (local time)</label>
+        <input id="audit-from" type="datetime-local" [value]="filters().from" (change)="applyFilters({ from: $any($event.target).value })" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label for="audit-to" class="font-medium">To (local time)</label>
+        <input id="audit-to" type="datetime-local" [value]="filters().to" (change)="applyFilters({ to: $any($event.target).value })" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" />
+      </div>
+    }
+
+    <div class="flex flex-col gap-1">
+      <label for="audit-user" class="font-medium">Acting user</label>
+      <select id="audit-user" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" (change)="applyFilters({ user: $any($event.target).value })">
+        <option value="" [selected]="filters().user === ''">Any user</option>
+        <option [value]="dataLayerActor" [selected]="filters().user === dataLayerActor">Data layer</option>
+        @for (member of members(); track member.id) {
+          <option [value]="member.id" [selected]="filters().user === member.id">{{ member.login }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="audit-action" class="font-medium">Action</label>
+      <select id="audit-action" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" (change)="applyFilters({ action: $any($event.target).value })">
+        <option value="" [selected]="filters().action === ''">Any action</option>
+        @for (action of actions; track action) {
+          <option [value]="action" [selected]="filters().action === action">{{ action }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="audit-outcome" class="font-medium">Outcome</label>
+      <select id="audit-outcome" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" (change)="applyFilters({ outcome: $any($event.target).value })">
+        <option value="" [selected]="filters().outcome === ''">Any outcome</option>
+        <option value="succeeded" [selected]="filters().outcome === 'succeeded'">Succeeded</option>
+        <option value="denied" [selected]="filters().outcome === 'denied'">Denied</option>
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="audit-order" class="font-medium">Order</label>
+      <select id="audit-order" class="rounded-md border border-border bg-surface px-2 py-1.5 text-text" (change)="applyFilters({ order: $any($event.target).value })">
+        <option value="asc" [selected]="filters().order === 'asc'">Ascending (oldest first)</option>
+        <option value="desc" [selected]="filters().order === 'desc'">Descending (newest first)</option>
+      </select>
+    </div>
+  </form>
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm">
+      Integrity:
+      @switch (displayedIntegrity().state) {
+        @case ('intact') { <span class="font-semibold text-success">Intact</span> <span class="text-text-muted">({{ $any(displayedIntegrity()).entries }} entries verified)</span> }
+        @case ('altered') {
+          <span class="font-semibold text-danger">Altered</span>
+          @if ($any(displayedIntegrity()).sequence !== null) {
+            <span class="text-text-muted">from sequence {{ $any(displayedIntegrity()).sequence }}</span>
+          }
+        }
+        @default { <span class="font-semibold">Not verified</span> }
+      }
+    </p>
+    <button type="button" class="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-surface-muted disabled:opacity-60" [disabled]="verifying()" (click)="verify()">Verify integrity</button>
+  </div>
+
+  @if (loadError(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+
+  <div class="overflow-x-auto rounded-md border border-border">
+    <table class="w-full min-w-[60rem] border-collapse text-left text-xs sm:text-sm">
+      <caption class="sr-only">Audit entries for the selected filters</caption>
+      <thead class="bg-surface-muted">
+        <tr>
+          <th scope="col" class="px-3 py-2 font-semibold">Sequence</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Time (UTC)</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Time (local)</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Actor</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Action</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Outcome</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Target</th>
+          <th scope="col" class="px-3 py-2 font-semibold">Chain</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.entry.sequence) {
+          <tr class="border-t border-border align-top">
+            <td class="px-3 py-2 font-mono">{{ row.entry.sequence }}</td>
+            <td class="px-3 py-2 text-text-muted">{{ row.entry.occurredAtUtc | date: 'medium' : 'UTC' }}</td>
+            <td class="px-3 py-2 text-text-muted">{{ row.entry.occurredAtUtc | date: 'medium' }}</td>
+            <td class="px-3 py-2" [class.italic]="row.entry.actorUserId === dataLayerActor">{{ actorName(row.entry) }}</td>
+            <td class="px-3 py-2">{{ row.entry.action }}</td>
+            <td class="px-3 py-2">
+              @if (row.entry.outcome === 'denied') {
+                <span class="font-medium text-danger"><span aria-hidden="true">✕</span> Denied</span>
+              } @else {
+                <span><span aria-hidden="true">✓</span> Succeeded</span>
+              }
+            </td>
+            <td class="px-3 py-2 font-mono text-text-muted">{{ targetOf(row.entry) }}</td>
+            <td class="px-3 py-2">
+              @if (row.link === 'broken') {
+                <span class="font-medium text-danger">Link broken at {{ row.entry.sequence }}</span>
+              } @else {
+                <span class="text-text-muted">{{ linkText(row.link) }}</span>
+              }
+            </td>
+          </tr>
+        } @empty {
+          @if (!loading()) {
+            <tr><td colspan="8" class="px-3 py-4 text-text-muted">No entries match these filters.</td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm text-text-muted">{{ rows().length }} entries loaded.</p>
+    @if (loading()) {
+      <p role="status" class="text-sm text-text-muted">Loading…</p>
+    } @else if (cursor() !== null) {
+      <button type="button" class="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-surface-muted" (click)="loadMore()">Load more</button>
+    }
+  </div>
+</section>
