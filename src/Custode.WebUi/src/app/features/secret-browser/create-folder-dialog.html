@@ -1,0 +1,29 @@
+<form class="w-full max-w-md rounded-lg border border-border bg-surface-raised p-6 text-text shadow-lg" (submit)="$event.preventDefault(); create()" novalidate>
+  <h2 id="create-folder-title" class="text-lg font-semibold">New folder</h2>
+  <p class="mt-1 text-sm text-text-muted">Created inside <span class="font-mono">{{ parentPath }}</span>.</p>
+
+  <div class="mt-4 flex flex-col gap-1">
+    <label for="folder-name" class="text-sm font-medium">Folder name</label>
+    <input
+      id="folder-name"
+      type="text"
+      autocomplete="off"
+      [value]="name()"
+      (input)="name.set($any($event.target).value)"
+      (blur)="touched.set(true)"
+      class="rounded-md border border-border bg-surface px-3 py-2 text-text"
+    />
+    @if (touched() && nameInvalid()) {
+      <p class="text-sm text-danger">Enter a name without slashes.</p>
+    }
+  </div>
+
+  @if (failure(); as message) {
+    <p role="alert" class="mt-3 text-sm font-medium text-danger">{{ message }}</p>
+  }
+
+  <div class="mt-6 flex flex-wrap justify-end gap-3">
+    <button type="button" class="rounded-md border border-border px-4 py-2 font-medium hover:bg-surface-muted" (click)="cancel()">Cancel</button>
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="submitting()">Create folder</button>
+  </div>
+</form>

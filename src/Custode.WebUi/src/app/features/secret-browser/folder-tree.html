@@ -1,0 +1,30 @@
+<cdk-tree [dataSource]="nodes()" [treeControl]="treeControl" role="tree" aria-label="Folders" class="flex flex-col gap-0.5 text-sm">
+  <cdk-tree-node
+    *cdkTreeNodeDef="let node"
+    cdkTreeNodePadding
+    role="treeitem"
+    [attr.aria-level]="node.level + 1"
+    [attr.aria-expanded]="open().has(node.path)"
+    [attr.aria-selected]="node.path === selectedPath()"
+    class="flex items-center gap-1 rounded-md pr-2"
+    [class.bg-surface-raised]="node.path === selectedPath()"
+    [class.font-semibold]="node.path === selectedPath()"
+  >
+    <button
+      type="button"
+      cdkTreeNodeToggle
+      tabindex="-1"
+      class="flex size-6 shrink-0 items-center justify-center rounded text-text-muted hover:bg-surface-raised"
+      [attr.aria-label]="(open().has(node.path) ? 'Collapse ' : 'Expand ') + node.name"
+    >{{ open().has(node.path) ? '▾' : '▸' }}</button>
+    <button
+      type="button"
+      tabindex="-1"
+      class="min-w-0 flex-1 truncate rounded px-1 py-1 text-left hover:bg-surface-raised"
+      (click)="select(node)"
+    >{{ node.name }}</button>
+    @if (inheritance().get(node.path) === false) {
+      <span class="shrink-0 text-xs text-danger">Broken</span>
+    }
+  </cdk-tree-node>
+</cdk-tree>

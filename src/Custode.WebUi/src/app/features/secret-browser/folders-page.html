@@ -1,0 +1,58 @@
+<section class="flex flex-col gap-6 lg:flex-row">
+  <aside class="w-full shrink-0 lg:w-72" aria-label="Folder tree">
+    <app-folder-tree [selectedPath]="folderPath()" (folderSelected)="openFolder($event)" />
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col gap-4">
+    <header class="flex flex-wrap items-end justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <p class="text-sm text-text-muted">Folder</p>
+        <h1 class="truncate font-mono text-lg font-semibold">{{ folderPath() }}</h1>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <div role="group" aria-label="Presentation" class="flex overflow-hidden rounded-md border border-border text-sm">
+          <button
+            type="button"
+            class="px-3 py-1.5 hover:bg-surface-muted"
+            [class.bg-surface-muted]="presentation() === 'table'"
+            [attr.aria-pressed]="presentation() === 'table'"
+            (click)="choosePresentation('table')"
+          >Table</button>
+          <button
+            type="button"
+            class="border-l border-border px-3 py-1.5 hover:bg-surface-muted"
+            [class.bg-surface-muted]="presentation() === 'cards'"
+            [attr.aria-pressed]="presentation() === 'cards'"
+            (click)="choosePresentation('cards')"
+          >Cards</button>
+        </div>
+
+        @if (isAdmin()) {
+          <a routerLink="/administration/access" [queryParams]="{ folderPath: folderPath() }" class="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-muted">Permissions</a>
+        }
+        <a routerLink="/transfer" [queryParams]="{ folderPath: folderPath() }" class="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-muted">Import or export</a>
+        @if (canCreate()) {
+          <button type="button" class="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-muted" (click)="newFolder()">New folder</button>
+          <a
+            routerLink="/secrets/new"
+            [queryParams]="{ folderPath: folderPath() }"
+            class="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-contrast"
+          >New secret</a>
+        }
+        @if (canDelete()) {
+          <button type="button" class="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-danger hover:bg-surface-muted" (click)="deleteFolder()">Delete folder</button>
+        }
+      </div>
+    </header>
+
+    @if (loadError(); as message) {
+      <p role="alert" class="text-sm font-medium text-danger">{{ message }}</p>
+    }
+    @if (actionError(); as message) {
+      <p role="alert" class="text-sm font-medium text-danger">{{ message }}</p>
+    }
+
+    <app-secret-list [secrets]="secrets()" [presentation]="presentation()" (openSecret)="openSecret($event)" />
+  </div>
+</section>

@@ -1,0 +1,27 @@
+<div class="w-full max-w-md rounded-lg border border-border bg-surface-raised p-6 text-text shadow-lg">
+  <h2 id="confirm-dialog-title" class="text-lg font-semibold">{{ data.title }}</h2>
+  <p class="mt-2 text-sm text-text-muted">{{ data.message }}</p>
+  @if (data.details && data.details.length > 0) {
+    <ul class="mt-3 list-disc pl-5 text-sm">
+      @for (line of data.details; track line) {
+        <li>{{ line }}</li>
+      }
+    </ul>
+  }
+  <div class="mt-6 flex flex-wrap justify-end gap-3">
+    <button
+      type="button"
+      class="rounded-md border border-border px-4 py-2 font-medium text-text hover:bg-surface-muted"
+      (click)="cancel()"
+    >Cancel</button>
+    <button
+      type="button"
+      class="rounded-md px-4 py-2 font-medium"
+      [class.bg-danger]="data.destructive"
+      [class.text-danger-contrast]="data.destructive"
+      [class.bg-accent]="!data.destructive"
+      [class.text-accent-contrast]="!data.destructive"
+      (click)="confirm()"
+    >{{ data.confirmLabel }}</button>
+  </div>
+</div>
