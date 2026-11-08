@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+/* Dark mode follows the `dark` class on <html>, set by the theme service. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Colors are defined once per theme as CSS variables and exposed
+ * to Tailwind through @theme, so components only use utilities such as
+ * `bg-surface` or `text-text-muted`. Components never define colors directly.
+ */
+:root {
+  color-scheme: light;
+
+  --surface: #ffffff;
+  --surface-muted: #f3f4f6;
+  --surface-raised: #ffffff;
+  --text: #111827;
+  --text-muted: #4b5563;
+  --border: #d1d5db;
+  --accent: #1d4ed8;
+  --accent-contrast: #ffffff;
+  --focus: #1d4ed8;
+  --danger: #b42318;
+  --danger-contrast: #ffffff;
+  --success: #067647;
+  --warning: #92400e;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --surface: #0f1117;
+  --surface-muted: #181b25;
+  --surface-raised: #1d2130;
+  --text: #e5e7eb;
+  --text-muted: #a3acba;
+  --border: #3a4152;
+  --accent: #8ab4ff;
+  --accent-contrast: #0b1220;
+  --focus: #8ab4ff;
+  --danger: #ff8a80;
+  --danger-contrast: #1f0a08;
+  --success: #6ee7a0;
+  --warning: #fcd34d;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-contrast: var(--danger-contrast);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+
+  --spacing: 0.25rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--surface);
+    color: var(--text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

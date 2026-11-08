@@ -1,0 +1,87 @@
+<div [class]="rootClasses()">
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-contrast"
+  >Skip to content</a>
+
+  @if (narrow()) {
+    <header class="flex items-center gap-3 border-b border-border bg-surface-raised px-4 py-3">
+      <button
+        #menuButton
+        type="button"
+        class="rounded-md border border-border px-3 py-2 text-sm font-medium text-text hover:bg-surface-muted"
+        aria-controls="app-sidebar"
+        [attr.aria-expanded]="drawerOpen()"
+        (click)="openDrawer()"
+      >Menu</button>
+      <span class="text-lg font-semibold">Custode</span>
+    </header>
+  }
+
+  @if (narrow() && drawerOpen()) {
+    <div class="fixed inset-0 z-30 bg-text/40" aria-hidden="true" (click)="closeDrawer()"></div>
+  }
+
+  <aside
+    id="app-sidebar"
+    aria-label="Application navigation"
+    [class]="sidebarClasses()"
+    [attr.inert]="narrow() && !drawerOpen() ? '' : null"
+    [cdkTrapFocus]="narrow() && drawerOpen()"
+    (keydown.escape)="closeDrawer()"
+  >
+    @if (narrow()) {
+      <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <span class="text-lg font-semibold">Custode</span>
+        <button
+          #closeButton
+          type="button"
+          class="rounded-md border border-border px-3 py-2 text-sm font-medium text-text hover:bg-surface-raised"
+          (click)="closeDrawer()"
+        >Close menu</button>
+      </div>
+    }
+    <div class="p-3 pb-0">
+      <button
+        type="button"
+        aria-keyshortcuts="Control+K Meta+K"
+        class="flex w-full items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-left text-sm text-text-muted hover:bg-surface-raised"
+        (click)="palette.open()"
+      >
+        <span>Search</span>
+        <kbd class="rounded border border-border px-1 text-xs">Ctrl K</kbd>
+      </button>
+    </div>
+    <nav aria-label="Main" class="flex flex-col gap-1 p-3">
+      @for (item of navItems(); track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-surface-raised font-semibold"
+          ariaCurrentWhenActive="page"
+          class="rounded-md px-3 py-2 text-sm text-text hover:bg-surface-raised"
+        >{{ item.label }}</a>
+      }
+    </nav>
+    <div class="mt-auto border-t border-border p-3">
+      <button
+        type="button"
+        class="w-full rounded-md border border-border px-3 py-2 text-left text-sm font-medium text-text hover:bg-surface-raised"
+        (click)="signOut()"
+      >Sign out</button>
+    </div>
+  </aside>
+
+  <main id="main" tabindex="-1" class="min-w-0 flex-1 p-4 md:p-6">
+    @if (notices.message(); as message) {
+      <div role="status" class="mb-4 flex items-center justify-between gap-3 rounded-md border border-border bg-surface-raised px-4 py-3 text-sm">
+        <span>{{ message }}</span>
+        <button
+          type="button"
+          class="rounded-md border border-border px-2 py-1 hover:bg-surface-muted"
+          (click)="notices.clear()"
+        >Dismiss</button>
+      </div>
+    }
+    <router-outlet />
+  </main>
+</div>
