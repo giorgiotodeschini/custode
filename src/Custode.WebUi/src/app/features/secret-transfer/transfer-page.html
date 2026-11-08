@@ -1,0 +1,162 @@
+<section class="flex max-w-5xl flex-col gap-10">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-lg font-semibold">Import and export</h1>
+    <p class="text-sm text-text-muted">Move secrets in and out of a folder. Only folders and secrets you can read are exported.</p>
+  </header>
+
+  <section class="flex flex-col gap-4 rounded-md border border-border bg-surface-raised p-5" aria-labelledby="export-title">
+    <h2 id="export-title" class="text-base font-semibold">Export</h2>
+
+    <div class="flex flex-col gap-1">
+      <label for="export-folder" class="text-sm font-medium">Folder, including its subfolders</label>
+      <input
+        id="export-folder"
+        type="text"
+        autocomplete="off"
+        [value]="exportFolder()"
+        (input)="exportFolder.set($any($event.target).value)"
+        class="rounded-md border border-border bg-surface px-3 py-2 font-mono text-text sm:max-w-md"
+      />
+    </div>
+
+    <fieldset class="flex flex-wrap gap-4 text-sm">
+      <legend class="mb-1 font-medium">Format</legend>
+      <label class="flex items-center gap-2"><input type="radio" name="export-format" value="json" [checked]="exportFormat() === 'json'" (change)="exportFormat.set('json')" /> JSON</label>
+      <label class="flex items-center gap-2"><input type="radio" name="export-format" value="csv" [checked]="exportFormat() === 'csv'" (change)="exportFormat.set('csv')" /> CSV</label>
+    </fieldset>
+
+    <label class="flex items-start gap-2 text-sm">
+      <input type="checkbox" class="mt-1" [checked]="includeValues()" (change)="includeValues.set($any($event.target).checked)" />
+      <span>Include secret values in plain text. You will be asked to confirm.</span>
+    </label>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="button" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="exporting()" (click)="exportCurrentFolder()">Export</button>
+      @if (exporting()) {
+        @if (exportProgress(); as progress) {
+          <p role="status" class="text-sm text-text-muted">
+            @if (progress.total > 0) {
+              Reading {{ progress.done }} of {{ progress.total }} secrets…
+            } @else {
+              Listing folders…
+            }
+          </p>
+        }
+        <button type="button" class="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-muted" (click)="cancelExport()">Cancel export</button>
+      }
+    </div>
+    @if (exportStatus(); as status) {
+      <p role="status" class="text-sm">{{ status }}</p>
+    }
+  </section>
+
+  <section class="flex flex-col gap-4 rounded-md border border-border bg-surface-raised p-5" aria-labelledby="import-title">
+    <h2 id="import-title" class="text-base font-semibold">Import</h2>
+    <p class="text-sm text-text-muted">
+      A JSON or CSV file is checked on the server first. Nothing is stored until you confirm, and either every secret is stored or none is.
+      Existing secrets are never overwritten.
+    </p>
+
+    <div class="flex flex-col gap-2">
+      <label for="import-file" class="text-sm font-medium">File</label>
+      <input id="import-file" type="file" accept=".json,.csv" class="text-sm" (change)="chooseFile($any($event.target).files)" />
+      @if (parseError(); as message) {
+        <p role="alert" class="text-sm text-danger">{{ message }}</p>
+      }
+    </div>
+
+    @if (items().length > 0) {
+      <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <p>
+          <span class="font-medium">{{ fileName() }}</span>:
+          {{ counts().create }} to create, {{ counts().skipped }} skipped,
+          {{ counts().conflicts }} conflicts, {{ counts().failing }} failing.
+        </p>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" [checked]="createMissingFolders()" (change)="setCreateMissingFolders($any($event.target).checked)" />
+          Create missing folders
+        </label>
+      </div>
+
+      @if (!checkCurrent() && !checking()) {
+        <p role="status" class="text-sm text-text-muted">Changes need checking again before you can import.</p>
+      }
+      @if (checkError(); as message) {
+        <p role="alert" class="text-sm text-danger">{{ message }}</p>
+      }
+
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-surface-muted disabled:opacity-60" [disabled]="checking() || importing()" (click)="check()">Check again</button>
+        @if (checking()) {
+          <button type="button" class="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-muted" (click)="cancelCheck()">Cancel check</button>
+          <span role="status" class="self-center text-sm text-text-muted">Checking {{ items().length }} rows…</span>
+        }
+      </div>
+
+      <div class="overflow-x-auto rounded-md border border-border">
+        <table class="w-full min-w-[48rem] border-collapse text-left text-sm">
+          <caption class="sr-only">Rows of the import file</caption>
+          <thead class="bg-surface-muted">
+            <tr>
+              <th scope="col" class="px-3 py-2 font-semibold">Skip</th>
+              <th scope="col" class="px-3 py-2 font-semibold">Name</th>
+              <th scope="col" class="px-3 py-2 font-semibold">Folder</th>
+              <th scope="col" class="px-3 py-2 font-semibold">Type</th>
+              <th scope="col" class="px-3 py-2 font-semibold">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of preview(); track row.index) {
+              <tr class="border-t border-border align-top">
+                <td class="px-3 py-2"><input type="checkbox" [checked]="row.status === 'skipped'" (change)="toggleSkip(row.index)" [attr.aria-label]="'Skip ' + rowLabel(row)" /></td>
+                <td class="px-3 py-2">
+                  <input
+                    type="text"
+                    autocomplete="off"
+                    [value]="row.item.name"
+                    (change)="rename(row.index, $any($event.target).value)"
+                    [attr.aria-label]="'Name of row ' + (row.index + 1)"
+                    class="w-full rounded-md border border-border bg-surface px-2 py-1 text-text"
+                  />
+                </td>
+                <td class="px-3 py-2 font-mono text-xs">{{ row.item.folderPath }}</td>
+                <td class="px-3 py-2 text-text-muted">{{ row.item.type }}</td>
+                <td class="px-3 py-2">
+                  @switch (row.status) {
+                    @case ('valid') { <span class="text-success">Will be created</span> }
+                    @case ('skipped') { <span class="text-text-muted">Skipped</span> }
+                    @case ('unchecked') { <span class="text-text-muted">Not checked yet</span> }
+                    @default { <span class="text-danger">{{ row.status }}</span> }
+                  }
+                  @if (row.message) {
+                    <p class="text-xs text-text-muted">{{ row.message }}</p>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (refused().length > 0) {
+        <div role="alert" class="flex flex-col gap-2 rounded-md border border-danger px-4 py-3 text-sm">
+          <p class="font-semibold">The server refused the import.</p>
+          <ul class="list-disc pl-5">
+            @for (row of refused(); track row.index) {
+              <li>{{ refusedLabel(row) }}: {{ row.message ?? row.status }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (importError(); as message) {
+        <p role="alert" class="text-sm text-danger">{{ message }}</p>
+      }
+
+      <div class="flex justify-end">
+        <button type="button" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="!canImport()" (click)="importNow()">
+          {{ importing() ? 'Importing…' : 'Import ' + counts().create + (counts().create === 1 ? ' secret' : ' secrets') }}
+        </button>
+      </div>
+    }
+  </section>
+</section>

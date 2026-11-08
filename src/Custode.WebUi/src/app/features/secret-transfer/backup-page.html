@@ -1,0 +1,60 @@
+<section class="flex max-w-xl flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-lg font-semibold">Encrypted tenant backup</h1>
+    <p class="text-sm text-text-muted">An encrypted copy of the whole tenant vault: folders, secrets with their versions, groups, grants, and policies. Account passwords and sessions are not included.</p>
+  </header>
+
+  <div role="note" class="flex flex-col gap-2 rounded-md border border-danger px-4 py-3 text-sm">
+    <p class="font-semibold">The backup cannot be opened without its passphrase, and the passphrase cannot be recovered.</p>
+    <p class="text-text-muted">Store the passphrase separately from the backup file. Custode does not keep it.</p>
+  </div>
+
+  <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); start()" novalidate>
+    <div class="flex flex-col gap-1">
+      <label for="backup-passphrase" class="text-sm font-medium">Passphrase</label>
+      <input
+        id="backup-passphrase"
+        type="password"
+        autocomplete="off"
+        [value]="passphrase()"
+        (input)="passphrase.set($any($event.target).value)"
+        class="rounded-md border border-border bg-surface px-3 py-2 text-text"
+      />
+      @if (attempted() && lengthError(); as message) {
+        <p class="text-sm text-danger">{{ message }}</p>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="backup-confirmation" class="text-sm font-medium">Enter the passphrase again</label>
+      <input
+        id="backup-confirmation"
+        type="password"
+        autocomplete="off"
+        [value]="confirmation()"
+        (input)="confirmation.set($any($event.target).value)"
+        class="rounded-md border border-border bg-surface px-3 py-2 text-text"
+      />
+      @if ((attempted() || confirmation().length > 0) && mismatch(); as message) {
+        <p class="text-sm text-danger">{{ message }}</p>
+      }
+      @if (attempted() && confirmation().length === 0) {
+        <p class="text-sm text-danger">Enter the passphrase a second time.</p>
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 font-medium text-accent-contrast disabled:opacity-60" [disabled]="running()">Export encrypted backup</button>
+      @if (running()) {
+        <button type="button" class="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-muted" (click)="cancel()">Cancel</button>
+      }
+    </div>
+  </form>
+
+  @if (status(); as message) {
+    <p role="status" class="text-sm text-text-muted">{{ message }}</p>
+  }
+  @if (failure(); as message) {
+    <p role="alert" class="text-sm text-danger">{{ message }}</p>
+  }
+</section>
